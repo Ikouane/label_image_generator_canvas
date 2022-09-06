@@ -1,0 +1,108 @@
+<!--
+ * @Author: ikouane
+ * @Date: 2022-09-05 09:50:42
+ * @LastEditTime: 2022-09-06 17:51:26
+ * @LastEditors: ikouane
+ * @Description: 
+ * @version: 
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Canvas-image-generate</title>
+
+  <!-- 引入样式 -->
+  <link rel="stylesheet" href="https://unpkg.zhimg.com/element-ui/lib/theme-chalk/index.css">
+
+  <style>
+    * {
+      -webkit-tap-highlight-color: transparent;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    button {
+      border: none;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .container canvas {
+      border: 1px solid #000;
+      background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAIAAADZF8uwAAAAGUlEQVQYV2M4gwH+YwCGIasIUwhT25BVBADtzYNYrHvv4gAAAABJRU5ErkJggg==);
+    }
+
+    .container .progressBar {
+      position: relative;
+      background-color: transparent;
+    }
+
+    .container .progressBar::after {
+      content: "";
+      position: absolute;
+      width: var(--percentage);
+      background-color: aqua;
+      z-index: -1;
+      top: 0;
+      left: 0;
+      height: 100%;
+      transition: all .2s ease-in-out;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <el-input-number v-model="config.text.fontSize" :min="14" :max="100" label="字号"></el-input-number>
+    <el-select v-model="config.text.fontFamily" placeholder="字体">
+      <el-option v-for="item in options" :key="item.value" :label="item.label" :value="item.value">
+      </el-option>
+    </el-select>
+    <el-color-picker v-model="config.text.color" show-alpha></el-color-picker>
+    <el-input v-model="text" placeholder="请输入内容" autofocus></el-input>
+    <el-input type="textarea" :rows="10" placeholder="请输入内容" v-model="textsData">
+    </el-input>
+    <el-switch v-model="config.holdConfigBeforeNextImport" active-text="配置保留" inactive-text="一次性配置">
+    </el-switch>
+
+    <el-color-picker v-model="config.background.color" show-alpha></el-color-picker>
+
+    <el-input-number v-model="config.interVal" :min="1" :max="10" label="导出速度"></el-input-number>
+
+    <!-- 画板 -->
+    <canvas ref="canvas" :width="canvas.width" :height="canvas.height"
+      :style="`width: ${ canvas.width }px; height: ${ canvas.height }px;`"></canvas>
+
+    <button @click="autoGenerate" class="progressBar"
+      :style="`--percentage: ${textsIndex / textsData.length * 100}%`">{{ textsIndex == 0 ?
+      '批量生成'
+      : `${textsIndex}/${textsData.length}`}}</button>
+    <button @click="download">下载</button>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+
+  <!-- 引入组件库 -->
+  <script src="https://unpkg.zhimg.com/element-ui/lib/index.js"></script>
+  <script src="app.js"></script>
+</body>
+
+</html>
