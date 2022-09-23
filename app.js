@@ -1,7 +1,7 @@
 /*
  * @Author: ikouane
  * @Date: 2022-09-05 09:51:55
- * @LastEditTime: 2022-09-06 17:50:43
+ * @LastEditTime: 2022-09-23 15:44:28
  * @LastEditors: ikouane
  * @Description:
  * @version:
@@ -22,16 +22,25 @@ const app = new Vue({
         // 每秒执行多少次导出任务
         interVal: 100,
         background: {
-          color: "#FFFFFF",
+          color: "rgba(0, 0, 0, 0.4)",
+          paddingTop: 5,
+          paddingRight: 5,
+          paddingBottom: 5,
+          paddingLeft: 5,
+          borderSize: 0,
+          borderColor: "rgba(0,0,0,0)",
+          borderRadius: 0,
         },
         text: {
           fontSize: 14,
           fontFamily: "serif",
-          color: "#000000",
+          color: "#FFFFFF",
+          textAlign: "center",
         },
       },
-      text: "",
+      text: "【测试文字】",
       textsIndex: 0,
+      textsDataRaw: "",
       textsData: [
         "文字1",
         {
@@ -111,9 +120,17 @@ const app = new Vue({
         }px ${
           config?.text.fontFamily || this.config.text.fontFamily || "serif"
         }`;
-        let width = this.ctx.measureText(text || this.text).width + 20;
+        let width =
+          this.ctx.measureText(text || this.text).width +
+          (config?.background.paddingLeft ||
+            this.config.background.paddingLeft) +
+          (config?.background.paddingRight ||
+            this.config.background.paddingRight);
         let height =
-          Math.floor(config?.text.fontSize || this.config.text.fontSize) * 1.25;
+          Math.floor(config?.text.fontSize || this.config.text.fontSize) +
+          (config?.background.paddingTop || this.config.background.paddingTop) +
+          (config?.background.paddingBottom ||
+            this.config.background.paddingBottom);
         this.canvas.width = width;
         this.canvas.height = height;
         console.log("调整画布大小");
@@ -128,6 +145,7 @@ const app = new Vue({
       });
     },
 
+    // TODO: 绘制多行文本
     // 转化文字配置
     generateTextConfig: function ({ config }) {
       return new Promise((resolve) => {
@@ -148,7 +166,8 @@ const app = new Vue({
       return new Promise(async (resolve) => {
         let newCtx = await this.generateBackgroundConfig({ config, text });
         console.log("绘制背景");
-        newCtx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        if (!this.config.background.borderSize)
+          newCtx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         resolve(newCtx);
       });
     },
@@ -170,15 +189,94 @@ const app = new Vue({
       return new Promise(async (resolve) => {
         this.clearCanvas();
         await this.drawBackground(tempConfig);
+        if (this.config.background.borderSize)
+          this.fillRoundRect(
+            this.ctx,
+            0,
+            0,
+            this.canvas.width,
+            this.canvas.height,
+            this.config.background.borderSize,
+            this.config.background.borderRadius,
+            this.config.background.color,
+            this.config.background.borderColor
+          );
         await this.drawText(tempConfig);
         resolve("done");
       });
     },
 
+    fillRoundRect(
+      cxt,
+      x,
+      y,
+      width,
+      height,
+      weight,
+      radius,
+      fillColor,
+      borderColor
+    ) {
+      //圆的直径必然要小于矩形的宽高
+      if (2 * radius > width || 2 * radius > height) {
+        return false;
+      }
+
+      cxt.save();
+      cxt.translate(x, y);
+      //绘制圆角矩形的各个边
+      this.drawRoundRectPath(cxt, width, height, weight, radius, borderColor);
+      cxt.fillStyle = fillColor || "#fff"; //若是给定了值就用给定的值否则给予默认值
+      cxt.fill();
+      cxt.restore();
+    },
+
+    drawRoundRectPath(cxt, width, height, weight, radius, borderColor) {
+      cxt.beginPath(0);
+      //从右下角顺时针绘制，弧度从0到1/2PI
+      cxt.arc(width - radius, height - radius, radius, 0, Math.PI / 2);
+      //矩形下边线
+      cxt.lineTo(radius, height);
+      //左下角圆弧，弧度从1/2PI到PI
+      cxt.arc(radius, height - radius, radius, Math.PI / 2, Math.PI);
+      //矩形左边线
+      cxt.lineTo(0, radius);
+      //左上角圆弧，弧度从PI到3/2PI
+      cxt.arc(radius, radius, radius, Math.PI, (Math.PI * 3) / 2);
+      //上边线
+      cxt.lineTo(width - radius, 0);
+      //右上角圆弧
+      cxt.arc(width - radius, radius, radius, (Math.PI * 3) / 2, Math.PI * 2);
+      //右边线
+      cxt.lineTo(width, height - radius);
+      console.log(borderColor);
+
+      cxt.strokeStyle = borderColor || "#fff";
+      cxt.lineWidth = weight;
+      cxt.stroke();
+      cxt.closePath();
+    },
+
+    uuid() {
+      let s = [];
+      let hexDigits = "0123456789abcdef";
+      for (let i = 0; i < 36; i++) {
+        s[i] = hexDigits.substr(Math.floor(Math.random() * 0x10), 1);
+      }
+      s[14] = "4"; // bits 12-15 of the time_hi_and_version field to 0010
+      s[19] = hexDigits.substr((s[19] & 0x3) | 0x8, 1); // bits 6-7 of the clock_seq_hi_and_reserved to 01
+      s[8] = s[13] = s[18] = s[23] = "-";
+
+      let uuid = s.join("");
+      return uuid;
+    },
+
     download: function (index) {
       let image = this.canvas.el.toDataURL("image/png");
       let link = document.createElement("a");
-      link.download = `pl_${index}.png`;
+      link.download = `pl_${
+        typeof index === "number" ? index : this.uuid()
+      }.png`;
       link.href = image;
       link.click();
     },
@@ -231,6 +329,11 @@ const app = new Vue({
   },
   mounted() {
     this.init();
+
+    this.config = window.VueUse.useStorage(
+      "canvas-image-generate-config",
+      this.config
+    );
   },
 
   watch: {
@@ -243,6 +346,10 @@ const app = new Vue({
     },
     text: function () {
       this.generateCanvas();
+    },
+    textsDataRaw: function (newVal) {
+      this.textsIndex = 0;
+      this.textsData = newVal.split("\n");
     },
   },
 });
